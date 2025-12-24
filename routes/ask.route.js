@@ -11,13 +11,28 @@ router.post("/", async (req, res) => {
   const vectors = loadVectors();
 
   const qEmbed = await embedText(question);
+const TOP_K = 4;
+const MAX_CONTEXT_CHARS = 1500;
 
-  const context = vectors
-    .map(v => ({ ...v, score: cosineSimilarity(qEmbed, v.embedding) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map(v => v.content)
-    .join("\n\n");
+const scored = vectors
+  .map(v => ({
+    ...v,
+    score: cosineSimilarity(qEmbed, v.embedding)
+  }))
+  .sort((a, b) => b.score - a.score)
+  .slice(0, TOP_K);
+
+let context = "";
+for (const v of scored) {
+  if ((context + v.content).length > MAX_CONTEXT_CHARS) break;
+  context += v.content + "\n\n";
+}
+//   const context = vectors
+//     .map(v => ({ ...v, score: cosineSimilarity(qEmbed, v.embedding) }))
+//     .sort((a, b) => b.score - a.score)
+//     .slice(0, 4)
+//     .map(v => v.content)
+//     .join("\n\n");
 
   const answer = await askOllama(context, question);
   res.json({ answer });
